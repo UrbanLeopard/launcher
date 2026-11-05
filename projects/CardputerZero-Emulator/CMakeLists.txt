@@ -4,14 +4,15 @@
 cmake_minimum_required(VERSION 3.16)
 project(cardputer-zero-emu LANGUAGES C CXX)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
 # macOS release builds should not include the emulator's input test driver.
 if(APPLE)
     option(BUILD_TESTING "Build emulator tests" OFF)
 endif()
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 include(CTest)
 
 # Paths — same repo, sibling projects
@@ -338,6 +339,19 @@ if(UNIX AND NOT APPLE AND NOT WIN32 AND NOT CMAKE_SYSTEM_NAME MATCHES "Windows|M
     target_link_options(cardputer-zero-emu PRIVATE -Wl,--allow-multiple-definition)
 endif()
 
+if(APPLE AND BUILD_TESTING AND TARGET APPLaunch)
+    target_compile_definitions(cardputer-zero-emu PRIVATE EMU_ENABLE_INPUT_TESTS=1)
+    add_test(NAME emulator-macos-runtime
+        COMMAND ${CMAKE_COMMAND} -E env
+            SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
+            EMU_TEST_CLICK_FRAME=10 EMU_TEST_NAVIGATE_FRAME=20
+            EMU_TEST_RESET_FRAME=40 EMU_TEST_QUIT_FRAME=60
+            $<TARGET_FILE:cardputer-zero-emu>)
+    set_tests_properties(emulator-macos-runtime PROPERTIES
+        WORKING_DIRECTORY $<TARGET_FILE_DIR:cardputer-zero-emu>
+        TIMEOUT 30)
+endif()
+
 target_include_directories(cardputer-zero-emu PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -453,19 +467,6 @@ if(TARGET APPLaunch)
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:APPLaunch> ${CMAKE_CURRENT_BINARY_DIR}/apps/
         COMMENT "Copying APPLaunch"
     )
-endif()
-
-if(APPLE AND BUILD_TESTING AND TARGET APPLaunch)
-    target_compile_definitions(cardputer-zero-emu PRIVATE EMU_ENABLE_INPUT_TESTS=1)
-    add_test(NAME emulator-macos-runtime
-        COMMAND ${CMAKE_COMMAND} -E env
-            SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
-            EMU_TEST_CLICK_FRAME=10 EMU_TEST_NAVIGATE_FRAME=20
-            EMU_TEST_RESET_FRAME=40 EMU_TEST_QUIT_FRAME=60
-            $<TARGET_FILE:cardputer-zero-emu>)
-    set_tests_properties(emulator-macos-runtime PROPERTIES
-        WORKING_DIRECTORY $<TARGET_FILE_DIR:cardputer-zero-emu>
-        TIMEOUT 30)
 endif()
 
 endif() # NOT EMSCRIPTEN
