@@ -32,20 +32,29 @@ jobs:
         git clone --depth 1 --branch v9.5.0 https://github.com/lvgl/lvgl.git projects/CardputerZero-Emulator/lib/lvgl
     - name: Install dependencies
       run: brew install sdl2 sdl2_image freetype pkg-config nlohmann-json
+    - name: Build production package
+      run: |
+        cd projects/CardputerZero-Emulator
+        cmake -S . -B build-package -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+        cmake --build build-package --parallel "$(sysctl -n hw.ncpu)"
     - name: Build
       run: |
         cd projects/CardputerZero-Emulator
         mkdir build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
         make -j$(sysctl -n hw.ncpu)
+    - name: Test
+      run: ctest --test-dir projects/CardputerZero-Emulator/build --output-on-failure
     - name: Package
       run: |
         cd projects/CardputerZero-Emulator
         mkdir -p dist/CardputerZero-Emulator
-        cp build/cardputer-zero-emu dist/CardputerZero-Emulator/
-        cp -r build/apps dist/CardputerZero-Emulator/
-        cp -r build/assets dist/CardputerZero-Emulator/
-        cp -r build/images dist/CardputerZero-Emulator/
+        cp build-package/cardputer-zero-emu dist/CardputerZero-Emulator/
+        cp -r build-package/apps dist/CardputerZero-Emulator/
+        cp -r build-package/assets dist/CardputerZero-Emulator/
+        cp -r build-package/images dist/CardputerZero-Emulator/
+        mkdir -p dist/CardputerZero-Emulator/APPLaunch
+        cp -r ../APPLaunch/APPLaunch/share dist/CardputerZero-Emulator/APPLaunch/
         cd dist && tar czf ../CardputerZero-Emulator-macOS.tar.gz CardputerZero-Emulator
     - uses: actions/upload-artifact@v4
       with:
