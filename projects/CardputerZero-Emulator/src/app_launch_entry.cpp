@@ -23,6 +23,10 @@ int app_key_filter(const struct key_item *item)
 }
 #endif
 
+#if defined(_WIN32)
+extern "C" void emu_init_windows_resource_paths(void);
+#endif
+
 namespace launcher_ui {
 void init();
 void deinit();
@@ -30,6 +34,9 @@ void deinit();
 
 extern "C" void ui_init(void)
 {
+#if defined(_WIN32)
+    emu_init_windows_resource_paths();
+#endif
     launcher_ui::init();
     ui_screensaver_init();
 #if defined(__APPLE__)

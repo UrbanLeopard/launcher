@@ -8,6 +8,9 @@
 #include "cp0_esc_state.h"
 #include "keyboard_input.h"
 #include "lvgl/lvgl.h"
+#if defined(_WIN32)
+#include "hal_lvgl_bsp.h"
+#endif
 
 #include <SDL2/SDL.h>
 
@@ -460,6 +463,29 @@ std::string cp0_file_path(std::string file)
 }
 
 extern "C" {
+
+#if defined(_WIN32)
+void emu_init_windows_resource_paths(void)
+{
+    // APPLaunch now resolves assets through the filesystem signal, rather than
+    // calling the legacy cp0_file_path wrapper. Keep this registration across
+    // UI resets, without accumulating duplicate callbacks.
+    static const auto connection = cp0_signal_filesystem_api.append(
+        [](std::list<std::string> args, std::function<void(int, std::string)> callback) {
+            if (!callback) return;
+            if (args.empty() || args.front() != "Path") {
+                callback(-2, "unsupported Windows emulator filesystem command");
+                return;
+            }
+            if (args.size() != 2 || args.back().find('\0') != std::string::npos) {
+                callback(-1, "invalid Path arguments");
+                return;
+            }
+            callback(0, web_resource_path(args.back()));
+        });
+    (void)connection;
+}
+#endif
 
 __attribute__((weak)) void ui_global_hint_on_key(const key_item *) {}
 
