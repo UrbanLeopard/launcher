@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 M5Stack Technology CO LTD
+# SPDX-License-Identifier: MIT
+
 name: Build Emulator
 
 on:
@@ -9,6 +12,7 @@ on:
       - 'projects/UserDemo/**'
       - 'SDK/**'
       - '.github/workflows/emulator-build.yml'
+      - '.github/scripts/*emulator*.sh'
   pull_request:
     branches: [master]
   workflow_dispatch:
@@ -44,15 +48,10 @@ jobs:
         cmake --build build --parallel "$(sysctl -n hw.ncpu)"
     - name: Test
       run: ctest --test-dir projects/CardputerZero-Emulator/build --output-on-failure --no-tests=error
-    - name: Check production instrumentation
-      run: |
-        cd projects/CardputerZero-Emulator
-        grep -q '^BUILD_TESTING:BOOL=OFF$' build-package/CMakeCache.txt
-        strings build-package/cardputer-zero-emu > build-package/emulator-strings.txt
-        if grep -Eq 'EMU_TEST_CLICK_FRAME|EMU_TEST_KEY_FRAME|click_delivered=' build-package/emulator-strings.txt; then
-          echo "Input test instrumentation found in the production binary" >&2
-          exit 1
-        fi
+    - name: Test instrumentation guard
+      run: bash .github/scripts/test-emulator-build-guard.sh
+    - name: Check test and production instrumentation
+      run: bash .github/scripts/check-emulator-builds.sh projects/CardputerZero-Emulator/build projects/CardputerZero-Emulator/build-package
     - name: Package
       run: |
         cd projects/CardputerZero-Emulator
@@ -62,7 +61,11 @@ jobs:
         cp -r build-package/assets dist/CardputerZero-Emulator/
         cp -r build-package/images dist/CardputerZero-Emulator/
         cp -r build-package/APPLaunch dist/CardputerZero-Emulator/
+        bash ../../.github/scripts/trim-emulator-fonts.sh dist/CardputerZero-Emulator
         cd dist && tar czf ../CardputerZero-Emulator-macOS.tar.gz CardputerZero-Emulator
+    - name: Smoke unpacked production archive
+      timeout-minutes: 1
+      run: bash .github/scripts/smoke-emulator-package.sh projects/CardputerZero-Emulator/CardputerZero-Emulator-macOS.tar.gz
     - uses: actions/upload-artifact@v4
       with:
         name: emulator-macos
@@ -100,15 +103,10 @@ jobs:
         cmake --build build --parallel "$(nproc)"
     - name: Test
       run: ctest --test-dir projects/CardputerZero-Emulator/build --output-on-failure --no-tests=error
-    - name: Check production instrumentation
-      run: |
-        cd projects/CardputerZero-Emulator
-        grep -q '^BUILD_TESTING:BOOL=OFF$' build-package/CMakeCache.txt
-        strings build-package/cardputer-zero-emu > build-package/emulator-strings.txt
-        if grep -Eq 'EMU_TEST_CLICK_FRAME|EMU_TEST_KEY_FRAME|click_delivered=' build-package/emulator-strings.txt; then
-          echo "Input test instrumentation found in the production binary" >&2
-          exit 1
-        fi
+    - name: Test instrumentation guard
+      run: bash .github/scripts/test-emulator-build-guard.sh
+    - name: Check test and production instrumentation
+      run: bash .github/scripts/check-emulator-builds.sh projects/CardputerZero-Emulator/build projects/CardputerZero-Emulator/build-package
     - name: Package
       run: |
         cd projects/CardputerZero-Emulator
@@ -118,7 +116,11 @@ jobs:
         cp -r build-package/assets dist/CardputerZero-Emulator/
         cp -r build-package/images dist/CardputerZero-Emulator/
         cp -r build-package/APPLaunch dist/CardputerZero-Emulator/
+        bash ../../.github/scripts/trim-emulator-fonts.sh dist/CardputerZero-Emulator
         cd dist && tar czf ../CardputerZero-Emulator-Linux.tar.gz CardputerZero-Emulator
+    - name: Smoke unpacked production archive
+      timeout-minutes: 1
+      run: bash .github/scripts/smoke-emulator-package.sh projects/CardputerZero-Emulator/CardputerZero-Emulator-Linux.tar.gz
     - uses: actions/upload-artifact@v4
       with:
         name: emulator-linux
@@ -170,10 +172,15 @@ jobs:
         cp -r build/apps dist/CardputerZero-Emulator/ 2>/dev/null || true
         cp -r build/assets dist/CardputerZero-Emulator/ 2>/dev/null || true
         cp -r build/images dist/CardputerZero-Emulator/ 2>/dev/null || true
+        cp -r build/APPLaunch dist/CardputerZero-Emulator/
+        bash ../../.github/scripts/trim-emulator-fonts.sh dist/CardputerZero-Emulator
         ldd build/cardputer-zero-emu.exe | grep mingw64 | awk '{print $3}' | while read dll; do
           cp "$dll" dist/CardputerZero-Emulator/
         done
         cd dist && tar czf ../CardputerZero-Emulator-Windows.tar.gz CardputerZero-Emulator
+    - name: Smoke unpacked production archive
+      timeout-minutes: 1
+      run: bash .github/scripts/smoke-emulator-package.sh projects/CardputerZero-Emulator/CardputerZero-Emulator-Windows.tar.gz
     - uses: actions/upload-artifact@v4
       with:
         name: emulator-windows
