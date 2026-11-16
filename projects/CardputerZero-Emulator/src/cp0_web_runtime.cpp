@@ -432,16 +432,23 @@ std::string web_resource_path(const std::string &file)
     if (file == "keyboard_device" || file == "keyboard_map") return "";
     if (file.size() > 0 && file[0] == '/') return file;
 
+#if defined(_WIN32)
+    // The native Windows executable shares this runtime with Web, but its
+    // packaged resources live beside the executable, not at a web root.
+    const std::string resource_root = "APPLaunch/share";
+#else
+    const std::string resource_root;
+#endif
     auto has_ext = [&](const char *ext) {
         return file.size() >= std::strlen(ext) &&
                file.compare(file.size() - std::strlen(ext), std::strlen(ext), ext) == 0;
     };
     if (has_ext(".png") || has_ext(".jpg") || has_ext(".jpeg") || has_ext(".gif") || has_ext(".svg"))
-        return "/images/" + file;
+        return resource_root + "/images/" + file;
     if (has_ext(".wav") || has_ext(".mp3") || has_ext(".ogg"))
-        return "/audio/" + file;
+        return resource_root + "/audio/" + file;
     if (has_ext(".ttf") || has_ext(".otf"))
-        return "/font/" + file;
+        return resource_root + "/font/" + file;
     return file;
 }
 
