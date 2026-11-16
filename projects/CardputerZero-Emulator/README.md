@@ -45,3 +45,12 @@ this excludes the input test driver. Package its `cardputer-zero-emu`, `apps/`,
 fonts, images, and sounds. The executable still expects Homebrew SDL2,
 SDL2_image, and FreeType libraries on the target Mac; the archive does not bundle
 those system dependencies.
+
+On Linux, resource paths are relative to the working directory. Change into the
+extracted package directory before launching so bundled icons, fonts, and sounds
+can be found:
+
+```sh
+cd CardputerZero-Emulator
+./cardputer-zero-emu
+```
